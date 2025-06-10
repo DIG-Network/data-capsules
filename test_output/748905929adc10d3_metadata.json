@@ -1,0 +1,28 @@
+{
+  "id": "748905929adc10d3953eaff3da15f3e8de9a06f18d47d190d30d04bfe78b992f",
+  "capsules": [
+    {
+      "index": 0,
+      "size": 262144,
+      "hash": "9ac16549fd9744c9ccffb310479dd89a7ebcd9c78a667f023df3da01bc539513",
+      "encrypted": false,
+      "compressed": true
+    }
+  ],
+  "metadata": {
+    "original_size": 21.0,
+    "capsule_count": 1,
+    "capsule_sizes": [
+      262144
+    ],
+    "checksum": "748905929adc10d3953eaff3da15f3e8de9a06f18d47d190d30d04bfe78b992f",
+    "chunking_algorithm": "DIG_DETERMINISTIC_V1",
+    "consensus_version": "DIG_CAPSULE_V1",
+    "encryption_info": null,
+    "compression_info": {
+      "algorithm": "gzip",
+      "level": 6,
+      "original_size": 21.0
+    }
+  }
+}

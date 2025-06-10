@@ -1,14 +1,16 @@
 {
-  "name": "@dignetwork/proof-of-work",
-  "version": "0.1.4",
+  "name": "@dignetwork/data-capsules",
+  "version": "0.1.0",
   "main": "index.js",
   "types": "index.d.ts",
+  "description": "Privacy-enhanced data processing with fixed-size capsules, encryption, and compression",
+  "keywords": ["privacy", "encryption", "compression", "capsules", "dig-network"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/DIG-Network/proof-of-work"
+    "url": "https://github.com/DIG-Network/data-capsules"
   },
   "napi": {
-    "name": "proof-of-work",
+    "name": "data-capsules",
     "triples": {
       "additional": [
         "aarch64-apple-darwin",
@@ -19,16 +21,23 @@
   "license": "MIT",
   "devDependencies": {
     "@napi-rs/cli": "^2.18.4",
+    "@types/node": "^20.0.0",
     "ava": "^6.0.1"
   },
   "ava": {
     "timeout": "3m",
     "files": [
-      "__test__/**/*"
-    ]
+      "__test__/*.spec.mjs"
+    ],
+    "watchMode": {
+      "ignoreChanges": [
+        "__test__/helpers/**/*",
+        "__test__/run-all-tests.mjs"
+      ]
+    }
   },
   "engines": {
-    "node": ">= 10"
+    "node": ">= 16"
   },
   "scripts": {
     "artifacts": "napi artifacts",
@@ -37,7 +46,12 @@
     "prepublishOnly": "napi prepublish -t npm",
     "test": "ava",
     "universal": "napi universal",
-    "version": "napi version"
+    "version": "napi version",
+    "clippy": "cargo clippy --workspace --all-features --all-targets",
+    "install-machete": "cargo install cargo-machete --locked",
+    "fmt-check": "cargo fmt --all -- --files-with-diff --check",
+    "lint": "npm run clippy && npm run fmt-check",
+    "lint-with-machete": "npm run clippy && npm run install-machete && npm run fmt-check"
   },
   "packageManager": "yarn@4.3.1"
 } 

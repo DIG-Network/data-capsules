@@ -32,24 +32,24 @@ switch (platform) {
   case 'android':
     switch (arch) {
       case 'arm64':
-        localFileExisted = existsSync(join(__dirname, 'proof-of-work.android-arm64.node'))
+        localFileExisted = existsSync(join(__dirname, 'data-capsules.android-arm64.node'))
         try {
           if (localFileExisted) {
-            nativeBinding = require('./proof-of-work.android-arm64.node')
+            nativeBinding = require('./data-capsules.android-arm64.node')
           } else {
-            nativeBinding = require('@dignetwork/proof-of-work-android-arm64')
+            nativeBinding = require('@dignetwork/data-capsules-android-arm64')
           }
         } catch (e) {
           loadError = e
         }
         break
       case 'arm':
-        localFileExisted = existsSync(join(__dirname, 'proof-of-work.android-arm-eabi.node'))
+        localFileExisted = existsSync(join(__dirname, 'data-capsules.android-arm-eabi.node'))
         try {
           if (localFileExisted) {
-            nativeBinding = require('./proof-of-work.android-arm-eabi.node')
+            nativeBinding = require('./data-capsules.android-arm-eabi.node')
           } else {
-            nativeBinding = require('@dignetwork/proof-of-work-android-arm-eabi')
+            nativeBinding = require('@dignetwork/data-capsules-android-arm-eabi')
           }
         } catch (e) {
           loadError = e
@@ -63,13 +63,13 @@ switch (platform) {
     switch (arch) {
       case 'x64':
         localFileExisted = existsSync(
-          join(__dirname, 'proof-of-work.win32-x64-msvc.node')
+          join(__dirname, 'data-capsules.win32-x64-msvc.node')
         )
         try {
           if (localFileExisted) {
-            nativeBinding = require('./proof-of-work.win32-x64-msvc.node')
+            nativeBinding = require('./data-capsules.win32-x64-msvc.node')
           } else {
-            nativeBinding = require('@dignetwork/proof-of-work-win32-x64-msvc')
+            nativeBinding = require('@dignetwork/data-capsules-win32-x64-msvc')
           }
         } catch (e) {
           loadError = e
@@ -77,13 +77,13 @@ switch (platform) {
         break
       case 'ia32':
         localFileExisted = existsSync(
-          join(__dirname, 'proof-of-work.win32-ia32-msvc.node')
+          join(__dirname, 'data-capsules.win32-ia32-msvc.node')
         )
         try {
           if (localFileExisted) {
-            nativeBinding = require('./proof-of-work.win32-ia32-msvc.node')
+            nativeBinding = require('./data-capsules.win32-ia32-msvc.node')
           } else {
-            nativeBinding = require('@dignetwork/proof-of-work-win32-ia32-msvc')
+            nativeBinding = require('@dignetwork/data-capsules-win32-ia32-msvc')
           }
         } catch (e) {
           loadError = e
@@ -91,13 +91,13 @@ switch (platform) {
         break
       case 'arm64':
         localFileExisted = existsSync(
-          join(__dirname, 'proof-of-work.win32-arm64-msvc.node')
+          join(__dirname, 'data-capsules.win32-arm64-msvc.node')
         )
         try {
           if (localFileExisted) {
-            nativeBinding = require('./proof-of-work.win32-arm64-msvc.node')
+            nativeBinding = require('./data-capsules.win32-arm64-msvc.node')
           } else {
-            nativeBinding = require('@dignetwork/proof-of-work-win32-arm64-msvc')
+            nativeBinding = require('@dignetwork/data-capsules-win32-arm64-msvc')
           }
         } catch (e) {
           loadError = e
@@ -108,23 +108,23 @@ switch (platform) {
     }
     break
   case 'darwin':
-    localFileExisted = existsSync(join(__dirname, 'proof-of-work.darwin-universal.node'))
+    localFileExisted = existsSync(join(__dirname, 'data-capsules.darwin-universal.node'))
     try {
       if (localFileExisted) {
-        nativeBinding = require('./proof-of-work.darwin-universal.node')
+        nativeBinding = require('./data-capsules.darwin-universal.node')
       } else {
-        nativeBinding = require('@dignetwork/proof-of-work-darwin-universal')
+        nativeBinding = require('@dignetwork/data-capsules-darwin-universal')
       }
       break
     } catch {}
     switch (arch) {
       case 'x64':
-        localFileExisted = existsSync(join(__dirname, 'proof-of-work.darwin-x64.node'))
+        localFileExisted = existsSync(join(__dirname, 'data-capsules.darwin-x64.node'))
         try {
           if (localFileExisted) {
-            nativeBinding = require('./proof-of-work.darwin-x64.node')
+            nativeBinding = require('./data-capsules.darwin-x64.node')
           } else {
-            nativeBinding = require('@dignetwork/proof-of-work-darwin-x64')
+            nativeBinding = require('@dignetwork/data-capsules-darwin-x64')
           }
         } catch (e) {
           loadError = e
@@ -132,13 +132,13 @@ switch (platform) {
         break
       case 'arm64':
         localFileExisted = existsSync(
-          join(__dirname, 'proof-of-work.darwin-arm64.node')
+          join(__dirname, 'data-capsules.darwin-arm64.node')
         )
         try {
           if (localFileExisted) {
-            nativeBinding = require('./proof-of-work.darwin-arm64.node')
+            nativeBinding = require('./data-capsules.darwin-arm64.node')
           } else {
-            nativeBinding = require('@dignetwork/proof-of-work-darwin-arm64')
+            nativeBinding = require('@dignetwork/data-capsules-darwin-arm64')
           }
         } catch (e) {
           loadError = e
@@ -152,12 +152,12 @@ switch (platform) {
     if (arch !== 'x64') {
       throw new Error(`Unsupported architecture on FreeBSD: ${arch}`)
     }
-    localFileExisted = existsSync(join(__dirname, 'proof-of-work.freebsd-x64.node'))
+    localFileExisted = existsSync(join(__dirname, 'data-capsules.freebsd-x64.node'))
     try {
       if (localFileExisted) {
-        nativeBinding = require('./proof-of-work.freebsd-x64.node')
+        nativeBinding = require('./data-capsules.freebsd-x64.node')
       } else {
-        nativeBinding = require('@dignetwork/proof-of-work-freebsd-x64')
+        nativeBinding = require('@dignetwork/data-capsules-freebsd-x64')
       }
     } catch (e) {
       loadError = e
@@ -168,26 +168,26 @@ switch (platform) {
       case 'x64':
         if (isMusl()) {
           localFileExisted = existsSync(
-            join(__dirname, 'proof-of-work.linux-x64-musl.node')
+            join(__dirname, 'data-capsules.linux-x64-musl.node')
           )
           try {
             if (localFileExisted) {
-              nativeBinding = require('./proof-of-work.linux-x64-musl.node')
+              nativeBinding = require('./data-capsules.linux-x64-musl.node')
             } else {
-              nativeBinding = require('@dignetwork/proof-of-work-linux-x64-musl')
+              nativeBinding = require('@dignetwork/data-capsules-linux-x64-musl')
             }
           } catch (e) {
             loadError = e
           }
         } else {
           localFileExisted = existsSync(
-            join(__dirname, 'proof-of-work.linux-x64-gnu.node')
+            join(__dirname, 'data-capsules.linux-x64-gnu.node')
           )
           try {
             if (localFileExisted) {
-              nativeBinding = require('./proof-of-work.linux-x64-gnu.node')
+              nativeBinding = require('./data-capsules.linux-x64-gnu.node')
             } else {
-              nativeBinding = require('@dignetwork/proof-of-work-linux-x64-gnu')
+              nativeBinding = require('@dignetwork/data-capsules-linux-x64-gnu')
             }
           } catch (e) {
             loadError = e
@@ -197,26 +197,26 @@ switch (platform) {
       case 'arm64':
         if (isMusl()) {
           localFileExisted = existsSync(
-            join(__dirname, 'proof-of-work.linux-arm64-musl.node')
+            join(__dirname, 'data-capsules.linux-arm64-musl.node')
           )
           try {
             if (localFileExisted) {
-              nativeBinding = require('./proof-of-work.linux-arm64-musl.node')
+              nativeBinding = require('./data-capsules.linux-arm64-musl.node')
             } else {
-              nativeBinding = require('@dignetwork/proof-of-work-linux-arm64-musl')
+              nativeBinding = require('@dignetwork/data-capsules-linux-arm64-musl')
             }
           } catch (e) {
             loadError = e
           }
         } else {
           localFileExisted = existsSync(
-            join(__dirname, 'proof-of-work.linux-arm64-gnu.node')
+            join(__dirname, 'data-capsules.linux-arm64-gnu.node')
           )
           try {
             if (localFileExisted) {
-              nativeBinding = require('./proof-of-work.linux-arm64-gnu.node')
+              nativeBinding = require('./data-capsules.linux-arm64-gnu.node')
             } else {
-              nativeBinding = require('@dignetwork/proof-of-work-linux-arm64-gnu')
+              nativeBinding = require('@dignetwork/data-capsules-linux-arm64-gnu')
             }
           } catch (e) {
             loadError = e
@@ -226,26 +226,26 @@ switch (platform) {
       case 'arm':
         if (isMusl()) {
           localFileExisted = existsSync(
-            join(__dirname, 'proof-of-work.linux-arm-musleabihf.node')
+            join(__dirname, 'data-capsules.linux-arm-musleabihf.node')
           )
           try {
             if (localFileExisted) {
-              nativeBinding = require('./proof-of-work.linux-arm-musleabihf.node')
+              nativeBinding = require('./data-capsules.linux-arm-musleabihf.node')
             } else {
-              nativeBinding = require('@dignetwork/proof-of-work-linux-arm-musleabihf')
+              nativeBinding = require('@dignetwork/data-capsules-linux-arm-musleabihf')
             }
           } catch (e) {
             loadError = e
           }
         } else {
           localFileExisted = existsSync(
-            join(__dirname, 'proof-of-work.linux-arm-gnueabihf.node')
+            join(__dirname, 'data-capsules.linux-arm-gnueabihf.node')
           )
           try {
             if (localFileExisted) {
-              nativeBinding = require('./proof-of-work.linux-arm-gnueabihf.node')
+              nativeBinding = require('./data-capsules.linux-arm-gnueabihf.node')
             } else {
-              nativeBinding = require('@dignetwork/proof-of-work-linux-arm-gnueabihf')
+              nativeBinding = require('@dignetwork/data-capsules-linux-arm-gnueabihf')
             }
           } catch (e) {
             loadError = e
@@ -255,26 +255,26 @@ switch (platform) {
       case 'riscv64':
         if (isMusl()) {
           localFileExisted = existsSync(
-            join(__dirname, 'proof-of-work.linux-riscv64-musl.node')
+            join(__dirname, 'data-capsules.linux-riscv64-musl.node')
           )
           try {
             if (localFileExisted) {
-              nativeBinding = require('./proof-of-work.linux-riscv64-musl.node')
+              nativeBinding = require('./data-capsules.linux-riscv64-musl.node')
             } else {
-              nativeBinding = require('@dignetwork/proof-of-work-linux-riscv64-musl')
+              nativeBinding = require('@dignetwork/data-capsules-linux-riscv64-musl')
             }
           } catch (e) {
             loadError = e
           }
         } else {
           localFileExisted = existsSync(
-            join(__dirname, 'proof-of-work.linux-riscv64-gnu.node')
+            join(__dirname, 'data-capsules.linux-riscv64-gnu.node')
           )
           try {
             if (localFileExisted) {
-              nativeBinding = require('./proof-of-work.linux-riscv64-gnu.node')
+              nativeBinding = require('./data-capsules.linux-riscv64-gnu.node')
             } else {
-              nativeBinding = require('@dignetwork/proof-of-work-linux-riscv64-gnu')
+              nativeBinding = require('@dignetwork/data-capsules-linux-riscv64-gnu')
             }
           } catch (e) {
             loadError = e
@@ -283,13 +283,13 @@ switch (platform) {
         break
       case 's390x':
         localFileExisted = existsSync(
-          join(__dirname, 'proof-of-work.linux-s390x-gnu.node')
+          join(__dirname, 'data-capsules.linux-s390x-gnu.node')
         )
         try {
           if (localFileExisted) {
-            nativeBinding = require('./proof-of-work.linux-s390x-gnu.node')
+            nativeBinding = require('./data-capsules.linux-s390x-gnu.node')
           } else {
-            nativeBinding = require('@dignetwork/proof-of-work-linux-s390x-gnu')
+            nativeBinding = require('@dignetwork/data-capsules-linux-s390x-gnu')
           }
         } catch (e) {
           loadError = e
@@ -310,14 +310,17 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { ProofOfWorkHandle, computeProofOfWorkAsync, verifyProofOfWork, difficultyToTargetHex, hashToDifficulty, getAlgorithmVersion, getAlgorithmSpec, verifyProofOfWorkStandardized, getAlgorithmParameters } = nativeBinding
+const { createDataCapsule, extractDataCapsule, createDataCapsuleFromFile, extractDataCapsuleToFile, loadCapsuleSet, reconstructFileFromCapsules, isValidCapsuleFile, getCapsuleFileInfo, calculateStorageOverhead, getCapsuleSizes, getConsensusVersion, validateConsensusParameters } = nativeBinding
 
-module.exports.ProofOfWorkHandle = ProofOfWorkHandle
-module.exports.computeProofOfWorkAsync = computeProofOfWorkAsync
-module.exports.verifyProofOfWork = verifyProofOfWork
-module.exports.difficultyToTargetHex = difficultyToTargetHex
-module.exports.hashToDifficulty = hashToDifficulty
-module.exports.getAlgorithmVersion = getAlgorithmVersion
-module.exports.getAlgorithmSpec = getAlgorithmSpec
-module.exports.verifyProofOfWorkStandardized = verifyProofOfWorkStandardized
-module.exports.getAlgorithmParameters = getAlgorithmParameters
+module.exports.createDataCapsule = createDataCapsule
+module.exports.extractDataCapsule = extractDataCapsule
+module.exports.createDataCapsuleFromFile = createDataCapsuleFromFile
+module.exports.extractDataCapsuleToFile = extractDataCapsuleToFile
+module.exports.loadCapsuleSet = loadCapsuleSet
+module.exports.reconstructFileFromCapsules = reconstructFileFromCapsules
+module.exports.isValidCapsuleFile = isValidCapsuleFile
+module.exports.getCapsuleFileInfo = getCapsuleFileInfo
+module.exports.calculateStorageOverhead = calculateStorageOverhead
+module.exports.getCapsuleSizes = getCapsuleSizes
+module.exports.getConsensusVersion = getConsensusVersion
+module.exports.validateConsensusParameters = validateConsensusParameters

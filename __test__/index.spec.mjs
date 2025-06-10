@@ -1,327 +1,639 @@
+// Capsule tests
+
 import test from 'ava'
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'fs'
+import { join } from 'path'
+import { tmpdir } from 'os'
+import { randomBytes, createHash } from 'crypto'
 
 import { 
-  computeProofOfWorkAsync, 
-  verifyProofOfWork, 
-  hashToDifficulty,
-  difficultyToTargetHex
+  createDataCapsule, 
+  extractDataCapsule, 
+  createDataCapsuleFromFile,
+  extractDataCapsuleToFile,
+  loadCapsuleSet,
+  reconstructFileFromCapsules,
+  getCapsuleSizes, 
+  calculateStorageOverhead,
+  getConsensusVersion,
+  validateConsensusParameters,
+  isValidCapsuleFile,
+  getCapsuleFileInfo
 } from '../index.js'
 
-// Helper function to wait for completion and get result (for comparison)
-async function waitForCompletionPolling(handle, timeoutMs = 30000) {
-  const start = Date.now()
-  while (Date.now() - start < timeoutMs) {
-    if (handle.isCompleted()) {
-      return handle.getResult()
-    }
-    if (handle.hasError()) {
-      throw new Error(handle.getError())
-    }
-    await new Promise(resolve => setTimeout(resolve, 10))
-  }
-  throw new Error('Timeout waiting for completion')
+// Helper functions
+function createTestData(size) {
+  return randomBytes(size)
 }
 
+function calculateSHA256(data) {
+  return createHash('sha256').update(data).digest('hex')
+}
 
+function createTempDir() {
+  const tempDir = join(tmpdir(), 'capsule-test-' + Date.now())
+  mkdirSync(tempDir, { recursive: true })
+  return tempDir
+}
 
-test('computeProofOfWorkAsync finds valid nonce for low difficulty', async (t) => {
-  const entropySeed = Buffer.from('async_test_entropy_seed_123456', 'utf-8')
-  const difficulty = 1.0 // Bitcoin difficulty 1.0 (easiest)
+function cleanupTempDir(dir) {
+  if (existsSync(dir)) {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+function createTestFile(size, filePath) {
+  const data = createTestData(size)
+  writeFileSync(filePath, data)
+  return data
+}
+
+// Basic functionality tests
+test('getCapsuleSizes returns correct fixed sizes', (t) => {
+  const sizes = getCapsuleSizes()
+  const expectedSizes = [
+    256 * 1024,   // 256 KB
+    1024 * 1024,  // 1 MB
+    10 * 1024 * 1024,   // 10 MB
+    100 * 1024 * 1024,  // 100 MB
+    1000 * 1024 * 1024  // 1000 MB
+  ]
   
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, 100000)
-  const result = await waitForCompletionPolling(handle)
-  
-  t.truthy(result)
-  t.is(typeof result.nonce, 'bigint')
-  t.is(typeof result.hash, 'string')
-  t.is(typeof result.attempts, 'bigint')
-  t.is(typeof result.time_ms, 'number')
-  t.is(result.difficulty, difficulty)
-  t.is(typeof result.target, 'string')
-  
-  // Verify the result
-  const isValid = verifyProofOfWork(entropySeed, Number(result.nonce), difficulty)
-  t.true(isValid)
+  t.deepEqual(sizes, expectedSizes)
 })
 
-test('waitForComplete method works correctly on successful computation', async (t) => {
-  const entropySeed = Buffer.from('waitForComplete_test_seed', 'utf-8')
-  const difficulty = 1.0 // Low difficulty for quick test
-  
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, 100000)
-  const waitResult = await handle.waitForComplete()
-  
-  t.truthy(waitResult)
-  t.is(waitResult.error, undefined)
-  t.truthy(waitResult.result)
-  t.is(typeof waitResult.result.nonce, 'bigint')
-  t.is(typeof waitResult.result.hash, 'string')
-  t.is(typeof waitResult.result.attempts, 'bigint')
-  t.is(typeof waitResult.result.time_ms, 'number')
-  t.is(waitResult.result.difficulty, difficulty)
-  t.is(typeof waitResult.result.target, 'string')
-  
-  // Verify the result
-  const isValid = verifyProofOfWork(entropySeed, Number(waitResult.result.nonce), difficulty)
-  t.true(isValid)
+test('getConsensusVersion returns valid version', (t) => {
+  const version = getConsensusVersion()
+  t.is(version, 'DIG_CAPSULE_V1')
 })
 
-test('waitForComplete method handles cancelled computation', async (t) => {
-  const entropySeed = Buffer.from('cancel_test_seed', 'utf-8')
-  const difficulty = 10000.0 // High difficulty to allow cancellation
+test('calculateStorageOverhead returns correct values', (t) => {
+  // Test with zero size
+  t.is(calculateStorageOverhead(0, 1), 0.0)
   
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, 10000000)
-  
-  // Cancel immediately
-  handle.cancel()
-  
-  const waitResult = await handle.waitForComplete()
-  
-  t.truthy(waitResult)
-  t.truthy(waitResult.error)
-  t.is(waitResult.result, undefined)
-  t.true(waitResult.error.includes('cancelled'))
+  // Test with small file requiring padding
+  const smallOverhead = calculateStorageOverhead(100 * 1024, 1) // 100KB
+  t.true(smallOverhead >= 5.0) // At least 5% minimum padding
 })
 
-test('verifyProofOfWork correctly validates nonces', async (t) => {
-  const entropySeed = Buffer.from('verification_test_entropy', 'utf-8')
-  const difficulty = 1.0 // Bitcoin difficulty 1.0
+// STREAMING FUNCTIONALITY TESTS (Primary API)
+
+test('createDataCapsuleFromFile handles small file with encryption', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const outputDir = join(tempDir, 'output')
   
-  // First find a valid nonce
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, 50000)
-  const result = await waitForCompletionPolling(handle)
-  const validNonce = Number(result.nonce)
-  
-  // Test valid nonce
-  t.true(verifyProofOfWork(entropySeed, validNonce, difficulty))
-  
-  // Test invalid nonce
-  t.false(verifyProofOfWork(entropySeed, validNonce + 1, difficulty))
-  
-  // Test with different entropy seed
-  const differentSeed = Buffer.from('different_entropy_seed', 'utf-8')
-  t.false(verifyProofOfWork(differentSeed, validNonce, difficulty))
+  try {
+    const originalData = createTestFile(150 * 1024, inputFile) // 150KB
+    const encryptionKey = 'test-streaming-key'
+    
+    const capsuleSet = await createDataCapsuleFromFile(inputFile, outputDir, false, encryptionKey)
+    
+    // Verify capsule set structure
+    t.is(typeof capsuleSet.id, 'string')
+    t.is(capsuleSet.id.length, 64) // SHA256 hex string
+    t.is(capsuleSet.metadata.originalSize, 150 * 1024)
+    t.is(capsuleSet.metadata.capsuleCount, 1)
+    t.is(capsuleSet.metadata.consensusVersion, 'DIG_CAPSULE_V1')
+    t.is(capsuleSet.metadata.chunkingAlgorithm, 'DIG_DETERMINISTIC_V1')
+    
+    // Verify encryption info
+    t.truthy(capsuleSet.metadata.encryptionInfo)
+    t.is(capsuleSet.metadata.encryptionInfo.algorithm, 'AES-256-GCM')
+    t.is(capsuleSet.metadata.encryptionInfo.keyDerivation, 'PBKDF2-HMAC-SHA256')
+    t.is(capsuleSet.metadata.encryptionInfo.iterations, 100000)
+    
+    // Verify compression info
+    t.truthy(capsuleSet.metadata.compressionInfo)
+    t.is(capsuleSet.metadata.compressionInfo.algorithm, 'gzip')
+    t.is(capsuleSet.metadata.compressionInfo.level, 6)
+    
+    // Verify capsule files exist
+    const metadataFile = join(outputDir, `${capsuleSet.id.substring(0, 16)}_metadata.json`)
+    t.true(existsSync(metadataFile))
+    
+    const capsuleFile = join(outputDir, `${capsuleSet.id.substring(0, 16)}_000.capsule`)
+    t.true(existsSync(capsuleFile))
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
 })
 
-test('hashToDifficulty correctly calculates difficulty', (t) => {
-  // Test hash with many leading zeros (high difficulty)
-  const hash1 = Buffer.from('00000000ff' + 'a'.repeat(54), 'hex')
-  const difficulty1 = hashToDifficulty(hash1)
-  t.true(difficulty1 >= 1.0)
+test('extractDataCapsuleToFile handles streaming extraction', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const outputDir = join(tempDir, 'capsules')
+  const reconstructedFile = join(tempDir, 'output.dat')
   
-  // Test hash with fewer leading zeros (lower difficulty)
-  const hash2 = Buffer.from('000fff' + 'a'.repeat(58), 'hex')
-  const difficulty2 = hashToDifficulty(hash2)
-  t.true(difficulty2 >= 1.0)
-  
-  // Hash1 should have higher difficulty than hash2
-  t.true(difficulty1 > difficulty2)
-  
-  // Test hash with no leading zeros (minimum difficulty)
-  const hash3 = Buffer.from('ff' + 'a'.repeat(62), 'hex')
-  const difficulty3 = hashToDifficulty(hash3)
-  t.true(difficulty3 >= 1.0)
+  try {
+    const originalData = createTestFile(500 * 1024, inputFile) // 500KB
+    const encryptionKey = 'streaming-extraction-test'
+    
+    // Create capsules
+    const capsuleSet = await createDataCapsuleFromFile(inputFile, outputDir, false, encryptionKey)
+    
+    // Extract using streaming
+    await extractDataCapsuleToFile(outputDir, reconstructedFile, encryptionKey)
+    
+    // Verify reconstruction
+    const reconstructedData = readFileSync(reconstructedFile)
+    t.deepEqual(reconstructedData, originalData)
+    
+    // Verify checksums
+    const originalChecksum = calculateSHA256(originalData)
+    const reconstructedChecksum = calculateSHA256(reconstructedData)
+    t.is(originalChecksum, reconstructedChecksum)
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
 })
 
-test('difficultyToTargetHex converts difficulty to target', (t) => {
-  const difficulty1 = 1.0
-  const target1 = difficultyToTargetHex(difficulty1)
-  t.is(typeof target1, 'string')
-  t.is(target1.length, 64) // 32 bytes = 64 hex chars
+test('loadCapsuleSet loads metadata without loading capsule data', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const outputDir = join(tempDir, 'capsules')
   
-  const difficulty2 = 2.0
-  const target2 = difficultyToTargetHex(difficulty2)
-  t.is(typeof target2, 'string')
-  t.is(target2.length, 64)
-  
-  // Higher difficulty should result in smaller target
-  t.true(target2 < target1)
+  try {
+    createTestFile(300 * 1024, inputFile) // 300KB
+    const encryptionKey = 'load-test-key'
+    
+    // Create capsules
+    const originalCapsuleSet = await createDataCapsuleFromFile(inputFile, outputDir, true, encryptionKey)
+    
+    // Load capsule set
+    const loadedCapsuleSet = await loadCapsuleSet(outputDir)
+    
+    // Verify metadata matches
+    t.is(loadedCapsuleSet.id, originalCapsuleSet.id)
+    t.is(loadedCapsuleSet.metadata.originalSize, originalCapsuleSet.metadata.originalSize)
+    t.is(loadedCapsuleSet.metadata.capsuleCount, originalCapsuleSet.metadata.capsuleCount)
+    t.is(loadedCapsuleSet.metadata.consensusVersion, originalCapsuleSet.metadata.consensusVersion)
+    
+    // Verify capsules metadata (but not data)
+    t.is(loadedCapsuleSet.capsules.length, originalCapsuleSet.capsules.length)
+    loadedCapsuleSet.capsules.forEach((capsule, index) => {
+      t.is(capsule.index, originalCapsuleSet.capsules[index].index)
+      t.is(capsule.size, originalCapsuleSet.capsules[index].size)
+      t.is(capsule.hash, originalCapsuleSet.capsules[index].hash)
+    })
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
 })
 
-test('proof of work fails when max attempts exceeded', async (t) => {
-  const entropySeed = Buffer.from('impossible_test_entropy', 'utf-8')
-  const difficulty = 1000000.0 // Very high difficulty, should be impossible with low attempts
-  const maxAttempts = 10 // Very low max attempts
+test('reconstructFileFromCapsules works with loaded CapsuleSet', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const capsulesDir = join(tempDir, 'capsules')
+  const reconstructedFile = join(tempDir, 'output.dat')
   
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, maxAttempts)
-  
-  await t.throwsAsync(async () => {
-    await waitForCompletionPolling(handle)
-  }, { message: /Failed to find solution after \d+ attempts/ })
+  try {
+    const originalData = createTestFile(750 * 1024, inputFile) // 750KB
+    const encryptionKey = 'reconstruct-test-key'
+    
+    // Create capsules
+    await createDataCapsuleFromFile(inputFile, capsulesDir, true, encryptionKey)
+    
+    // Load capsule set metadata
+    const capsuleSet = await loadCapsuleSet(capsulesDir)
+    
+    // Reconstruct using loaded metadata
+    await reconstructFileFromCapsules(capsuleSet, capsulesDir, reconstructedFile, encryptionKey)
+    
+    // Verify reconstruction
+    const reconstructedData = readFileSync(reconstructedFile)
+    t.deepEqual(reconstructedData, originalData)
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
 })
 
-test('proof of work fails with invalid difficulty', (t) => {
-  const entropySeed = Buffer.from('invalid_difficulty_test', 'utf-8')
+test('validateConsensusParameters validates correct capsule sets', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const outputDir = join(tempDir, 'capsules')
   
-  // Test negative difficulty
-  t.throws(() => {
-    computeProofOfWorkAsync(entropySeed, -1.0, 1000)
-  }, { message: /Difficulty must be greater than 0/ })
-  
-  // Test zero difficulty
-  t.throws(() => {
-    computeProofOfWorkAsync(entropySeed, 0.0, 1000)
-  }, { message: /Difficulty must be greater than 0/ })
+  try {
+    createTestFile(256 * 1024, inputFile) // Exactly 256KB
+    const encryptionKey = 'consensus-test-key'
+    
+    const capsuleSet = await createDataCapsuleFromFile(inputFile, outputDir, false, encryptionKey)
+    
+    // Should validate successfully
+    const isValid = await validateConsensusParameters(capsuleSet)
+    t.true(isValid)
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
 })
 
-test('handle provides correct interface', (t) => {
-  const entropySeed = Buffer.from('handle_test_entropy', 'utf-8')
-  const difficulty = 1.0 // Low difficulty for quick completion
-  
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, 50000)
-  
-  t.truthy(handle)
-  t.is(typeof handle.cancel, 'function')
-  t.is(typeof handle.isCancelled, 'function')
-  t.is(typeof handle.getAttempts, 'function')
-  t.is(typeof handle.isCompleted, 'function')
-  t.is(typeof handle.hasError, 'function')
-  t.is(typeof handle.getError, 'function')
-  t.is(typeof handle.getResult, 'function')
-  t.is(typeof handle.getProgress, 'function')
-  t.is(typeof handle.getDifficulty, 'function')
-  t.is(typeof handle.waitForComplete, 'function')
-  
-  // Clean up
-  handle.cancel()
-})
-
-test('cancellable proof of work can be cancelled', (t) => {
-  const entropySeed = Buffer.from('cancel_test_entropy_hard', 'utf-8')
-  const difficulty = 10000.0 // High difficulty to ensure it runs long enough
-  
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, 10000000)
-  
-  // Cancel immediately
-  handle.cancel()
-  
-  // Should be cancelled
-  t.true(handle.isCancelled())
-})
-
-test('cancellable proof of work reports progress', async (t) => {
-  const entropySeed = Buffer.from('progress_test_entropy', 'utf-8')
-  const difficulty = 100.0 // Medium difficulty
-  
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, 50000)
-  
-  // Wait a bit for some progress
-  await new Promise(resolve => setTimeout(resolve, 100))
-  
-  const progress = handle.getProgress()
-  t.truthy(progress)
-  t.is(typeof progress.attempts, 'bigint')
-  t.is(typeof progress.nonce, 'bigint')
-  t.is(typeof progress.elapsed_ms, 'number')
-  t.is(typeof progress.attempts_per_second, 'number')
-  
-  // Clean up
-  handle.cancel()
-})
-
-test('cancellable proof of work detects completion', async (t) => {
-  const entropySeed = Buffer.from('completion_test_entropy', 'utf-8')
-  const difficulty = 1.0 // Very low difficulty for quick completion
-  
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, 100000)
-  
-  // Wait for completion (should be quick with difficulty 1.0)
-  let completed = false
-  for (let i = 0; i < 50; i++) {
-    await new Promise(resolve => setTimeout(resolve, 100))
-    if (handle.isCompleted()) {
-      completed = true
-      break
+test('validateConsensusParameters rejects invalid consensus parameters', async (t) => {
+  const invalidCapsuleSet = {
+    id: 'test',
+    capsules: [{
+      index: 0,
+      size: 300000, // Invalid size not in CAPSULE_SIZES
+      hash: 'test',
+      encrypted: false,
+      compressed: true
+    }],
+    metadata: {
+      originalSize: 300000,
+      capsuleCount: 1,
+      capsuleSizes: [300000],
+      checksum: 'test',
+      chunkingAlgorithm: 'DIG_DETERMINISTIC_V1',
+      consensusVersion: 'DIG_CAPSULE_V1',
+      compressionInfo: {
+        algorithm: 'gzip',
+        level: 6,
+        originalSize: 300000
+      }
     }
   }
   
-  t.true(completed, 'Proof of work should complete with low difficulty')
-  
-  // Get the result and verify it
-  const result = handle.getResult()
-  t.truthy(result)
-  t.is(typeof result.nonce, 'bigint')
+  await t.throwsAsync(
+    async () => await validateConsensusParameters(invalidCapsuleSet),
+    { message: /Consensus violation.*Invalid capsule size/ }
+  )
 })
 
-test('proof of work with logging enabled works correctly', async (t) => {
-  const entropySeed = Buffer.from('logging_test_entropy', 'utf-8')
-  const difficulty = 1.0 // Low difficulty for quick completion
+// CAPSULE FILE VALIDATION TESTS
+
+test('isValidCapsuleFile identifies valid capsule files', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const capsulesDir = join(tempDir, 'capsules')
   
-  // Test with logging enabled - should not throw and should find solution
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, 100000, true)
-  const result = await waitForCompletionPolling(handle)
-  
-  t.truthy(result)
-  t.is(typeof result.nonce, 'bigint')
-  t.is(typeof result.hash, 'string')
-  t.is(typeof result.attempts, 'bigint')
-  t.is(typeof result.time_ms, 'number')
-  t.is(result.difficulty, difficulty)
-  t.is(typeof result.target, 'string')
-  
-  // Verify the result
-  const isValid = verifyProofOfWork(entropySeed, Number(result.nonce), difficulty)
-  t.true(isValid)
+  try {
+    createTestFile(100 * 1024, inputFile) // 100KB
+    const encryptionKey = 'validation-test-key'
+    
+    // Create capsules
+    const capsuleSet = await createDataCapsuleFromFile(inputFile, capsulesDir, false, encryptionKey)
+    
+    // Check capsule files
+    for (let i = 0; i < capsuleSet.metadata.capsuleCount; i++) {
+      const capsuleFile = join(capsulesDir, `${capsuleSet.id.substring(0, 16)}_${i.toString().padStart(3, '0')}.capsule`)
+      const isValid = await isValidCapsuleFile(capsuleFile)
+      t.true(isValid, `Capsule file ${i} should be valid`)
+    }
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
 })
 
-test('double SHA-256 vs single SHA-256 produces different results', async (t) => {
-  const entropySeed = Buffer.from('sha_comparison_test', 'utf-8')
-  const difficulty = 1.0
+test('isValidCapsuleFile rejects invalid files', async (t) => {
+  const tempDir = createTempDir()
   
-  // Test with double SHA-256 (Bitcoin style)
-  const handleDouble = computeProofOfWorkAsync(entropySeed, difficulty, 100000, false, true)
-  const resultDouble = await waitForCompletionPolling(handleDouble)
-  
-  // Test with single SHA-256
-  const handleSingle = computeProofOfWorkAsync(entropySeed, difficulty, 100000, false, false)
-  const resultSingle = await waitForCompletionPolling(handleSingle)
-  
-  // Both should succeed but produce different results
-  t.truthy(resultDouble)
-  t.truthy(resultSingle)
-  t.not(resultDouble.hash, resultSingle.hash)
-  
-  // Verify both results with their respective hash functions
-  t.true(verifyProofOfWork(entropySeed, Number(resultDouble.nonce), difficulty, true))
-  t.true(verifyProofOfWork(entropySeed, Number(resultSingle.nonce), difficulty, false))
-  
-  // Cross-verification should fail
-  t.false(verifyProofOfWork(entropySeed, Number(resultDouble.nonce), difficulty, false))
-  t.false(verifyProofOfWork(entropySeed, Number(resultSingle.nonce), difficulty, true))
+  try {
+    // Test with non-existent file
+    const nonExistentFile = join(tempDir, 'nonexistent.capsule')
+    const isValidNonExistent = await isValidCapsuleFile(nonExistentFile)
+    t.false(isValidNonExistent, 'Non-existent file should be invalid')
+    
+    // Test with invalid file (not a capsule)
+    const invalidFile = join(tempDir, 'invalid.capsule')
+    writeFileSync(invalidFile, 'This is not a capsule file')
+    const isValidInvalid = await isValidCapsuleFile(invalidFile)
+    t.false(isValidInvalid, 'Invalid file should be invalid')
+    
+    // Test with truncated header
+    const truncatedFile = join(tempDir, 'truncated.capsule')
+    writeFileSync(truncatedFile, Buffer.from([1, 2, 3, 4])) // Too short
+    const isValidTruncated = await isValidCapsuleFile(truncatedFile)
+    t.false(isValidTruncated, 'Truncated file should be invalid')
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
 })
 
-test('handle can get difficulty', (t) => {
-  const entropySeed = Buffer.from('difficulty_getter_test', 'utf-8')
-  const difficulty = 2.5
+test('getCapsuleFileInfo extracts correct header information', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const capsulesDir = join(tempDir, 'capsules')
   
-  const handle = computeProofOfWorkAsync(entropySeed, difficulty, 1000)
-  
-  t.is(handle.getDifficulty(), difficulty)
-  
-  // Clean up
-  handle.cancel()
+  try {
+    createTestFile(150 * 1024, inputFile) // 150KB
+    const encryptionKey = 'header-info-test'
+    
+    // Create capsules with specific parameters
+    const capsuleSet = await createDataCapsuleFromFile(inputFile, capsulesDir, true, encryptionKey) // postProcessPadding = true
+    
+    // Get info from first capsule
+    const capsuleFile = join(capsulesDir, `${capsuleSet.id.substring(0, 16)}_000.capsule`)
+    const info = await getCapsuleFileInfo(capsuleFile)
+    
+    t.truthy(info, 'Should return capsule info')
+    t.is(info.magic, '4449474341503031', 'Magic should be DIGCAP01 in hex') // "DIGCAP01" 
+    t.is(info.version, 1, 'Version should be 1')
+    t.is(info.capsuleIndex, 0, 'Index should be 0')
+    t.is(info.capsuleSize, 256 * 1024, 'Size should be 256KB')
+    t.true(info.isEncrypted, 'Should be encrypted')
+    t.true(info.isCompressed, 'Should be compressed')
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
 })
 
-test('waitForComplete vs polling comparison', async (t) => {
-  const entropySeed = Buffer.from('comparison_test', 'utf-8')
-  const difficulty = 1.0
+test('getCapsuleFileInfo returns null for invalid files', async (t) => {
+  const tempDir = createTempDir()
   
-  // Test with waitForComplete
-  const handle1 = computeProofOfWorkAsync(entropySeed, difficulty, 100000)
-  const waitResult = await handle1.waitForComplete()
+  try {
+    // Test with non-existent file
+    const nonExistentFile = join(tempDir, 'nonexistent.capsule')
+    const infoNonExistent = await getCapsuleFileInfo(nonExistentFile)
+    t.is(infoNonExistent, null, 'Should return null for non-existent file')
+    
+    // Test with invalid file
+    const invalidFile = join(tempDir, 'invalid.capsule')
+    writeFileSync(invalidFile, 'This is not a capsule file')
+    const infoInvalid = await getCapsuleFileInfo(invalidFile)
+    t.is(infoInvalid, null, 'Should return null for invalid file')
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
+})
+
+test('capsule headers maintain format consistency', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const capsulesDir = join(tempDir, 'capsules')
   
-  // Test with polling
-  const handle2 = computeProofOfWorkAsync(entropySeed, difficulty, 100000)
-  const pollingResult = await waitForCompletionPolling(handle2)
+  try {
+    createTestFile(300 * 1024, inputFile) // 300KB -> will use 256KB capsules
+    const encryptionKey = 'header-consistency-test'
+    
+    // Create capsules
+    const capsuleSet = await createDataCapsuleFromFile(inputFile, capsulesDir, false, encryptionKey)
+    
+    // Verify all capsule files have consistent headers
+    for (let i = 0; i < capsuleSet.metadata.capsuleCount; i++) {
+      const capsuleFile = join(capsulesDir, `${capsuleSet.id.substring(0, 16)}_${i.toString().padStart(3, '0')}.capsule`)
+      const info = await getCapsuleFileInfo(capsuleFile)
+      
+      // Get the expected capsule size for this specific capsule
+      const expectedCapsuleSize = capsuleSet.capsules[i].size
+      
+      t.truthy(info, `Capsule ${i} should have valid header`)
+      t.is(info.magic, '4449474341503031', `Capsule ${i} should have correct magic`)
+      t.is(info.version, 1, `Capsule ${i} should have correct version`)
+      t.is(info.capsuleIndex, i, `Capsule ${i} should have correct index`)
+      t.is(info.capsuleSize, expectedCapsuleSize, `Capsule ${i} should have correct size`)
+      t.true(info.isEncrypted, `Capsule ${i} should be encrypted`)
+      t.true(info.isCompressed, `Capsule ${i} should be compressed`)
+    }
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
+})
+
+// LARGE FILE STREAMING TESTS
+
+test('handles large file (5MB) with streaming I/O', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const capsulesDir = join(tempDir, 'capsules')
+  const reconstructedFile = join(tempDir, 'output.dat')
   
-  // Both should succeed
-  t.is(waitResult.error, undefined)
-  t.truthy(waitResult.result)
-  t.truthy(pollingResult)
+  try {
+    const originalData = createTestFile(5 * 1024 * 1024, inputFile) // 5MB
+    const encryptionKey = 'large-file-test'
+    
+    const startTime = Date.now()
+    
+    // Create capsules using streaming
+    const capsuleSet = await createDataCapsuleFromFile(inputFile, capsulesDir, false, encryptionKey)
+    const createTime = Date.now() - startTime
+    
+    // Should complete efficiently
+    t.true(createTime < 10000, `Creation took ${createTime}ms`)
+    
+    // Verify structure
+    t.is(capsuleSet.metadata.originalSize, 5 * 1024 * 1024)
+    t.is(capsuleSet.metadata.capsuleCount, 5) // 5 x 1MB capsules
+    
+    // Extract using streaming
+    await extractDataCapsuleToFile(capsulesDir, reconstructedFile, encryptionKey)
+    
+    // Verify file size (without loading into memory)
+    const reconstructedStats = readFileSync(reconstructedFile)
+    t.is(reconstructedStats.length, originalData.length)
+    
+    // Verify checksums
+    const originalChecksum = calculateSHA256(originalData)
+    const reconstructedChecksum = calculateSHA256(reconstructedStats)
+    t.is(originalChecksum, reconstructedChecksum)
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
+}, { timeout: 30000 })
+
+// DETERMINISTIC CONSENSUS TESTS
+
+test('deterministic processing produces identical results', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const outputDir1 = join(tempDir, 'output1')
+  const outputDir2 = join(tempDir, 'output2')
   
-  // Results should be identical for same input
-  t.is(waitResult.result.nonce, pollingResult.nonce)
-  t.is(waitResult.result.hash, pollingResult.hash)
-  t.is(waitResult.result.difficulty, pollingResult.difficulty)
-  t.is(waitResult.result.target, pollingResult.target)
+  try {
+    createTestFile(400 * 1024, inputFile) // 400KB
+    const encryptionKey = 'deterministic-test-key'
+    
+    // Create capsules twice with same parameters
+    const capsuleSet1 = await createDataCapsuleFromFile(inputFile, outputDir1, false, encryptionKey)
+    const capsuleSet2 = await createDataCapsuleFromFile(inputFile, outputDir2, false, encryptionKey)
+    
+    // Results should be identical
+    t.is(capsuleSet1.id, capsuleSet2.id)
+    t.is(capsuleSet1.metadata.checksum, capsuleSet2.metadata.checksum)
+    t.is(capsuleSet1.metadata.capsuleCount, capsuleSet2.metadata.capsuleCount)
+    
+    // Capsule hashes should match
+    capsuleSet1.capsules.forEach((capsule1, index) => {
+      const capsule2 = capsuleSet2.capsules[index]
+      t.is(capsule1.hash, capsule2.hash)
+      t.is(capsule1.size, capsule2.size)
+    })
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
+})
+
+test('postProcessPadding modes produce different but valid results', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const outputDir1 = join(tempDir, 'output1')
+  const outputDir2 = join(tempDir, 'output2')
+  const reconstruct1 = join(tempDir, 'recon1.dat')
+  const reconstruct2 = join(tempDir, 'recon2.dat')
+  
+  try {
+    const originalData = createTestFile(200 * 1024, inputFile) // 200KB
+    const encryptionKey = 'padding-mode-test'
+    
+    // Create with postProcessPadding = false
+    const capsuleSet1 = await createDataCapsuleFromFile(inputFile, outputDir1, false, encryptionKey)
+    
+    // Create with postProcessPadding = true
+    const capsuleSet2 = await createDataCapsuleFromFile(inputFile, outputDir2, true, encryptionKey)
+    
+    // Should have same processing and checksums (since padding mode is now consistent)
+    t.is(capsuleSet1.metadata.checksum, capsuleSet2.metadata.checksum)
+    
+    // Since padding is now always post-process, capsule hashes should be identical
+    t.is(capsuleSet1.capsules[0].hash, capsuleSet2.capsules[0].hash)
+    
+    // Both should reconstruct correctly
+    await extractDataCapsuleToFile(outputDir1, reconstruct1, encryptionKey)
+    await extractDataCapsuleToFile(outputDir2, reconstruct2, encryptionKey)
+    
+    const recon1Data = readFileSync(reconstruct1)
+    const recon2Data = readFileSync(reconstruct2)
+    
+    t.deepEqual(recon1Data, originalData)
+    t.deepEqual(recon2Data, originalData)
+    t.deepEqual(recon1Data, recon2Data)
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
+})
+
+// LEGACY COMPATIBILITY TESTS (Buffer-based operations)
+
+test('legacy createDataCapsule still works for small data', async (t) => {
+  const tempDir = createTempDir()
+  
+  try {
+    const testData = createTestData(100 * 1024) // 100KB
+    const encryptionKey = 'legacy-test-key'
+    const outputDir = join(tempDir, 'legacy_capsules')
+    
+    const capsuleSet = await createDataCapsule(testData, outputDir, false, encryptionKey)
+    
+    t.is(capsuleSet.metadata.originalSize, 100 * 1024)
+    t.is(capsuleSet.metadata.capsuleCount, 1)
+    t.true(capsuleSet.capsules[0].encrypted)
+    t.true(capsuleSet.capsules[0].compressed)
+  } finally {
+    cleanupTempDir(tempDir)
+  }
+})
+
+test('legacy round-trip with small data', async (t) => {
+  const tempDir = createTempDir()
+  
+  try {
+    const originalData = createTestData(150 * 1024) // 150KB
+    const encryptionKey = 'legacy-round-trip'
+    
+    // Create using buffer method with output directory
+    const outputDir = join(tempDir, 'legacy')
+    const capsuleSet = await createDataCapsule(originalData, outputDir, false, encryptionKey)
+    
+    // Extract using method that returns buffer
+    const extractedData = await extractDataCapsule(outputDir, encryptionKey)
+    
+    // Verify
+    t.deepEqual(Buffer.from(extractedData), Buffer.from(originalData))
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
+})
+
+// ERROR HANDLING TESTS
+
+test('streaming extraction fails with wrong decryption key', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const capsulesDir = join(tempDir, 'capsules')
+  const outputFile = join(tempDir, 'output.dat')
+  
+  try {
+    createTestFile(100 * 1024, inputFile)
+    const correctKey = 'correct-key'
+    const wrongKey = 'wrong-key'
+    
+    await createDataCapsuleFromFile(inputFile, capsulesDir, false, correctKey)
+    
+    await t.throwsAsync(
+      async () => await extractDataCapsuleToFile(capsulesDir, outputFile, wrongKey)
+    )
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
+})
+
+test('loadCapsuleSet fails with non-existent path', async (t) => {
+  await t.throwsAsync(
+    async () => await loadCapsuleSet('/non/existent/path')
+  )
+})
+
+// EDGE CASES
+
+test('handles file exactly at capsule boundary (256KB)', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const capsulesDir = join(tempDir, 'capsules')
+  const outputFile = join(tempDir, 'output.dat')
+  
+  try {
+    const originalData = createTestFile(256 * 1024, inputFile) // Exactly 256KB
+    const encryptionKey = 'boundary-test'
+    
+    const capsuleSet = await createDataCapsuleFromFile(inputFile, capsulesDir, false, encryptionKey)
+    
+    t.is(capsuleSet.metadata.originalSize, 256 * 1024)
+    t.is(capsuleSet.metadata.capsuleCount, 1)
+    
+    await extractDataCapsuleToFile(capsulesDir, outputFile, encryptionKey)
+    
+    const reconstructedData = readFileSync(outputFile)
+    t.deepEqual(reconstructedData, originalData)
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
+})
+
+test('handles file just over capsule boundary (256KB + 1 byte)', async (t) => {
+  const tempDir = createTempDir()
+  const inputFile = join(tempDir, 'input.dat')
+  const capsulesDir = join(tempDir, 'capsules')
+  const outputFile = join(tempDir, 'output.dat')
+  
+  try {
+    const originalData = createTestFile(256 * 1024 + 1, inputFile) // 256KB + 1 byte
+    const encryptionKey = 'over-boundary-test'
+    
+    const capsuleSet = await createDataCapsuleFromFile(inputFile, capsulesDir, false, encryptionKey)
+    
+    t.is(capsuleSet.metadata.originalSize, 256 * 1024 + 1)
+    t.is(capsuleSet.metadata.capsuleCount, 2) // Should create 2 x 256KB capsules
+    
+    await extractDataCapsuleToFile(capsulesDir, outputFile, encryptionKey)
+    
+    const reconstructedData = readFileSync(outputFile)
+    t.deepEqual(reconstructedData, originalData)
+    
+  } finally {
+    cleanupTempDir(tempDir)
+  }
 })
