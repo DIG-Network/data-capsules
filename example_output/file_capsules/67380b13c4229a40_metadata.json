@@ -1,0 +1,44 @@
+{
+  "id": "67380b13c4229a404d389cb3f4ce9ca5daa00e38b269bad5bb884a9f23ae68f3",
+  "capsules": [
+    {
+      "index": 0,
+      "size": 262144,
+      "hash": "afee7d2ed1898686f9d4de830124fd89227c31a4d0a7ff2e388f4ab89398be54",
+      "encrypted": false,
+      "compressed": true
+    },
+    {
+      "index": 1,
+      "size": 262144,
+      "hash": "5009642c4c20e4b91b35c44be461b6aa205c15cbc72f0b6c0d3c5db00c45fb14",
+      "encrypted": false,
+      "compressed": true
+    },
+    {
+      "index": 2,
+      "size": 262144,
+      "hash": "cfa55b0ef7470a9b5378c8585c3bb719b0868c62a4d2fbcc910dc17d63929de4",
+      "encrypted": false,
+      "compressed": true
+    }
+  ],
+  "metadata": {
+    "original_size": 768000.0,
+    "capsule_count": 3,
+    "capsule_sizes": [
+      262144,
+      262144,
+      262144
+    ],
+    "checksum": "67380b13c4229a404d389cb3f4ce9ca5daa00e38b269bad5bb884a9f23ae68f3",
+    "chunking_algorithm": "DIG_DETERMINISTIC_V1",
+    "consensus_version": "DIG_CAPSULE_V1",
+    "encryption_info": null,
+    "compression_info": {
+      "algorithm": "gzip",
+      "level": 6,
+      "original_size": 768000.0
+    }
+  }
+}

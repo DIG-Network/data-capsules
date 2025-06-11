@@ -1,0 +1,41 @@
+{
+  "id": "6176458e26eeb13cb749a57a7b61c100f1ccaa104e28215b076f56ed0ce12c47",
+  "capsules": [
+    {
+      "index": 0,
+      "size": 1048576,
+      "hash": "f742ca7d42ff73760c1bcb001c981acddd4004b0015d50ccb00f9ae274b08593",
+      "encrypted": true,
+      "compressed": true
+    },
+    {
+      "index": 1,
+      "size": 262144,
+      "hash": "393f0ba40127575e45f9a6cc2a2ab8b9c6bd8c61fd1ffa236aac385181dcd533",
+      "encrypted": true,
+      "compressed": true
+    }
+  ],
+  "metadata": {
+    "original_size": 512000.0,
+    "capsule_count": 2,
+    "capsule_sizes": [
+      262144,
+      262144
+    ],
+    "checksum": "6176458e26eeb13cb749a57a7b61c100f1ccaa104e28215b076f56ed0ce12c47",
+    "chunking_algorithm": "DIG_DETERMINISTIC_V1",
+    "consensus_version": "DIG_CAPSULE_V1",
+    "encryption_info": {
+      "algorithm": "AES-256-GCM",
+      "key_derivation": "PBKDF2-HMAC-SHA256",
+      "iterations": 100000,
+      "salt": "DIG_CAPSULE_SALT_V1"
+    },
+    "compression_info": {
+      "algorithm": "gzip",
+      "level": 6,
+      "original_size": 512000.0
+    }
+  }
+}

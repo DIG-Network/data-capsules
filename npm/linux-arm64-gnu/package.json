@@ -1,9 +1,9 @@
 {
-  "name": "@dignetwork/proof-of-work-linux-arm64-gnu",
+  "name": "@dignetwork/data-capsules-linux-arm64-gnu",
   "version": "0.1.4",
   "repository": {
     "type": "git",
-    "url": "https://github.com/DIG-Network/proof-of-work"
+    "url": "https://github.com/DIG-Network/data-capsules"
   },
   "os": [
     "linux"
@@ -11,9 +11,9 @@
   "cpu": [
     "arm64"
   ],
-  "main": "proof-of-work.linux-arm64-gnu.node",
+  "main": "data-capsules.linux-arm64-gnu.node",
   "files": [
-    "proof-of-work.linux-arm64-gnu.node"
+    "data-capsules.linux-arm64-gnu.node"
   ],
   "license": "MIT",
   "engines": {

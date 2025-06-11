@@ -1,9 +1,9 @@
 {
-  "name": "@dignetwork/proof-of-work-darwin-x64",
+  "name": "@dignetwork/data-capsules-darwin-x64",
   "version": "0.1.4",
   "repository": {
     "type": "git",
-    "url": "https://github.com/DIG-Network/proof-of-work"
+    "url": "https://github.com/DIG-Network/data-capsules"
   },
   "os": [
     "darwin"
@@ -11,9 +11,9 @@
   "cpu": [
     "x64"
   ],
-  "main": "proof-of-work.darwin-x64.node",
+  "main": "data-capsules.darwin-x64.node",
   "files": [
-    "proof-of-work.darwin-x64.node"
+    "data-capsules.darwin-x64.node"
   ],
   "license": "MIT",
   "engines": {

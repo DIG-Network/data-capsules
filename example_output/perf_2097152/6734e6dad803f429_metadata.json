@@ -1,0 +1,41 @@
+{
+  "id": "6734e6dad803f4291d9dc9f066929c82ad8b784cb7cdcd8ded0bb6d06af437d9",
+  "capsules": [
+    {
+      "index": 0,
+      "size": 10485760,
+      "hash": "78128f82e46fff0a78aa9b86a20889229d5107b130ad7f370b627ad115bdb981",
+      "encrypted": true,
+      "compressed": true
+    },
+    {
+      "index": 1,
+      "size": 10485760,
+      "hash": "e0921b747c3fb6d768eb819b2568efb6826f94b7b3da46109cabd00ef40c5b4f",
+      "encrypted": true,
+      "compressed": true
+    }
+  ],
+  "metadata": {
+    "original_size": 2097152.0,
+    "capsule_count": 2,
+    "capsule_sizes": [
+      1048576,
+      1048576
+    ],
+    "checksum": "6734e6dad803f4291d9dc9f066929c82ad8b784cb7cdcd8ded0bb6d06af437d9",
+    "chunking_algorithm": "DIG_DETERMINISTIC_V1",
+    "consensus_version": "DIG_CAPSULE_V1",
+    "encryption_info": {
+      "algorithm": "AES-256-GCM",
+      "key_derivation": "PBKDF2-HMAC-SHA256",
+      "iterations": 100000,
+      "salt": "DIG_CAPSULE_SALT_V1"
+    },
+    "compression_info": {
+      "algorithm": "gzip",
+      "level": 6,
+      "original_size": 2097152.0
+    }
+  }
+}

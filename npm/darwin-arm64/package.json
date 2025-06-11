@@ -1,9 +1,9 @@
 {
-  "name": "@dignetwork/proof-of-work-darwin-arm64",
-  "version": "0.1.4",
+  "name": "@dignetwork/data-capsules-darwin-arm64",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/DIG-Network/proof-of-work"
+    "url": "https://github.com/DIG-Network/data-capsules"
   },
   "os": [
     "darwin"
@@ -11,9 +11,9 @@
   "cpu": [
     "arm64"
   ],
-  "main": "proof-of-work.darwin-arm64.node",
+  "main": "data-capsules.darwin-arm64.node",
   "files": [
-    "proof-of-work.darwin-arm64.node"
+    "data-capsules.darwin-arm64.node"
   ],
   "license": "MIT",
   "engines": {
